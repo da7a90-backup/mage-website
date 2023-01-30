@@ -16,14 +16,17 @@ const config = {
 		entries: [],
 	  },
 	preprocess: [
-        preprocess({
-		    postcss: true
-        }),
-        sveltePreprocessSvg({
-			// svgo: true,
+		preprocess({
+			postcss: true
 		}),
-],
+		sveltePreprocessSvg({
+			svgo: true
+		})
+	],
 
-};
+	kit: {
+		adapter: adapter()
+	}
+}
 
-export default config;
+export default config

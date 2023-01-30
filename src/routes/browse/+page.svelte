@@ -4,21 +4,24 @@
 	import ChannelList from '$lib/components/Browse/ChannelTable.svelte'
 	import ChannelSection from '$lib/components/Browse/Section.svelte'
 	import { onMount } from 'svelte'
-	import { getChannels } from '$lib/stores/channelStore'
+	import { getChannels, getTechListJson, techList } from '$lib/stores/channelStore'
 
 	let channels: any
 	onMount(async () => {
+		if (!$techList.length) {
+			await getTechListJson()
+		}
 		channels = await getChannels()
 	})
-	$: console.log(channels)
 </script>
 
-<Carousel bind:channels />
+<Carousel bind:channels /> <!-- Most active -->
 <ChannelSearch />
 
-<ChannelSection title="Daily category" bind:channels />
-<ChannelSection title="Most active" bind:channels />
-<ChannelSection title="Top streamers" bind:channels />
-<ChannelSection title="Rising stars" bind:channels />
+<ChannelSection title="Wk1: Favorite game of all time" bind:channels />
+<ChannelSection title="Highest Ranked" bind:channels /> <!-- UserSection -->
+<ChannelSection title="Rising stars" bind:channels /> <!-- UserSection -->
+<ChannelSection title="My channels" bind:channels />
+<ChannelSection title="Fav channels" bind:channels />
 
 <ChannelList bind:channels />

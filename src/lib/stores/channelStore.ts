@@ -1,6 +1,7 @@
-import { writable, type Writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 import { env } from '$env/dynamic/public'
 import { currentUser } from '$lib/stores/authStore'
+import { getHeaders } from '$lib/stores/helperStore'
 
 let skip = 0
 let limit = 100
@@ -10,6 +11,8 @@ export const currentChannel: Writable<any> = writable(null)
 export const myChannels: Writable<[]> = writable([])
 export const channels: Writable<[]> = writable([])
 export const searchedchannels: Writable<[]> = writable([])
+export const techList: Writable<[]> = writable([])
+export const tags: Writable<any> = writable([])
 
 async function createChannel({
 	title,
@@ -44,7 +47,8 @@ async function createChannel({
 			avatar: user.avatar,
 			isHostActive: true,
 			channelType
-		})
+		}),
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		if (channelType === 'channel') {
@@ -63,13 +67,15 @@ async function deleteChannel({ channelId }: { channelId: string }) {
 
 async function getChannel({ channelId }: { channelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/channel?channelId=${channelId}`, {
-		method: 'GET'
+		method: 'GET',
+		headers: getHeaders()
 	}).then((response) => response.json())
 }
 
 async function addChannelToUser({ channelId }: { channelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/channels?channelId=${channelId}`, {
-		method: 'GET'
+		method: 'GET',
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -78,7 +84,8 @@ async function addChannelToUser({ channelId }: { channelId: string }) {
 
 async function removeChannelFromUser({ channelId, userId }: { channelId: string; userId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/channels?channelId=${channelId}`, {
-		method: 'DELETE'
+		method: 'DELETE',
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -88,7 +95,8 @@ async function removeChannelFromUser({ channelId, userId }: { channelId: string;
 
 async function addHostChannelToUser({ hostChannelId }: { hostChannelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/host-channels?hostChannelId=${hostChannelId}`, {
-		method: 'PUT'
+		method: 'PUT',
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -97,7 +105,8 @@ async function addHostChannelToUser({ hostChannelId }: { hostChannelId: string }
 
 async function removeHostChannelFromUser({ hostChannelId }: { hostChannelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/host-channels?hostChannelId=${hostChannelId}`, {
-		method: 'DELETE'
+		method: 'DELETE',
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -227,7 +236,8 @@ function resetSkipLimit() {
 
 async function getMyChannels() {
 	return await fetch(`${env.PUBLIC_API_URL}/channels/me/hosted`, {
-		method: 'GET'
+		method: 'GET',
+		headers: getHeaders()
 	}).then(async (response) => {
 		const res = await response.json()
 		myChannels.set(res)
@@ -395,6 +405,78 @@ async function toggleNotifications({ channel, userId }: { channel: any; userId: 
 //     }
 // }
 
+async function getTechList() {
+	if (get(techList).length < 1) {
+		let web2Assets: any = await fetch(`/category/web2/_categoryWeb2.json`, {
+			method: 'GET'
+		})
+		let web3Assets: any = await fetch(`/category/web3/_categoryWeb3.json`, {
+			method: 'GET'
+		})
+		let gameAssets: any = await fetch(`/category/games/_categoryGames.json`, {
+			method: 'GET'
+		})
+		if (web2Assets.ok) {
+			web2Assets = await web2Assets.json()
+		}
+		if (web3Assets.ok) {
+			web3Assets = await web3Assets.json()
+		}
+		if (gameAssets.ok) {
+			gameAssets = await gameAssets.json()
+		}
+
+		web3Assets.forEach((file: any) => {
+			let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
+			fileName = fileName.substring(0, fileName.indexOf('.'))
+			const nameAndTickerList = fileName.split('-')
+			const ticker = nameAndTickerList.pop().toUpperCase()
+			const fullName = nameAndTickerList
+				.map((name: any) => name.charAt(0).toUpperCase() + name.slice(1))
+				.join(' ')
+			file.item_text = `${fullName} (${ticker})`
+		})
+		web2Assets.push(...web3Assets)
+		gameAssets.forEach((file: any) => {
+			let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
+			fileName = fileName.substring(0, fileName.indexOf('.'))
+			const nameSplitList = fileName.split('-')
+			const fullName = nameSplitList
+				.map((name: any) => name.charAt(0).toUpperCase() + name.slice(1))
+				.join(' ')
+			file.item_text = fullName
+		})
+		web2Assets.push(...gameAssets)
+		techList.set(web2Assets)
+	}
+}
+
+async function getTechListJson() {
+	if (get(techList).length < 1) {
+		let gameAssets: any = await fetch(`svg-json/image_urls.json`, {
+			method: 'GET'
+		})
+		if (gameAssets.ok) {
+			gameAssets = await gameAssets.json()
+		}
+		techList.set(gameAssets)
+		return gameAssets
+	}
+}
+
+async function getTags() {
+	let res: any = await fetch(`${env.PUBLIC_API_URL}/tags`, {
+		method: 'GET'
+	})
+	if (res.ok) {
+		res = await res.json()
+		tags.set(res)
+	} else {
+		throw new Error('Tags not found')
+	}
+	return res
+}
+
 export {
 	createChannel,
 	deleteChannel,
@@ -416,5 +498,7 @@ export {
 	getChannels,
 	leaveChannel,
 	enterChannel,
-	toggleNotifications
+	toggleNotifications,
+	getTechListJson,
+	getTags
 }
