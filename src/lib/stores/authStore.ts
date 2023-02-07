@@ -4,6 +4,8 @@ import { writable, type Writable } from 'svelte/store'
 
 export const currentUser: Writable<any> = writable(null)
 
+export const userRole: Writable<any> = writable(null)
+
 const logout = () => currentUser.set(null);
 
 async function getUserDetails(jwt: string, userId: string) {
