@@ -1,10 +1,10 @@
 <script lang="ts">
 	import IconLink from '$lib/assets/icons/IconLink.svelte'
 	import IconMore from '$lib/assets/icons/IconMore.svelte'
-	import ChannelList from '$lib/components/Browse/ChannelTable.svelte'
-	import FollowList from '$lib/components/Profile/FollowList.svelte'
+	import TableSection from '$lib/components/Browse/Sections/TableSection.svelte'
+	import SubscribeList from '$lib/components/Profile/SubscribeList.svelte'
 
-	let tabs = ['Stats', 'Channels', 'Follows']
+	let tabs = ['Stats', 'Channels', 'Subscribers']
 	let activeTab = 0
 </script>
 
@@ -250,10 +250,10 @@
 								</div>
 							</div>
 							<div class="flex-auto h-full" class:hidden={activeTab != 1}>
-								<ChannelList />
+								<TableSection />
 							</div>
 							<div class="flex-auto h-full" class:hidden={activeTab != 2}>
-								<FollowList />
+								<SubscribeList />
 							</div>
 						</div>
 					</div>

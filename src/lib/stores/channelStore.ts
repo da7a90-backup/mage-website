@@ -1,18 +1,15 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { env } from '$env/dynamic/public'
-import { currentUser } from '$lib/stores/authStore'
-import { getHeaders } from '$lib/stores/helperStore'
-
-let skip = 0
-let limit = 100
 
 export const searchQuery: Writable<string> = writable('')
 export const currentChannel: Writable<any> = writable(null)
-export const myChannels: Writable<[]> = writable([])
-export const channels: Writable<[]> = writable([])
-export const searchedchannels: Writable<[]> = writable([])
 export const techList: Writable<[]> = writable([])
 export const tags: Writable<any> = writable([])
+export const categoryAssets: Writable<{
+	web2: object
+	web3: object
+	game: object
+}> = writable({ web2: {}, web3: {}, game: {} })
 
 async function createChannel({
 	title,
@@ -47,8 +44,7 @@ async function createChannel({
 			avatar: user.avatar,
 			isHostActive: true,
 			channelType
-		}),
-		headers: getHeaders()
+		})
 	}).then(async (response) => {
 		const res = await response.json()
 		if (channelType === 'channel') {
@@ -67,15 +63,13 @@ async function deleteChannel({ channelId }: { channelId: string }) {
 
 async function getChannel({ channelId }: { channelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/channel?channelId=${channelId}`, {
-		method: 'GET',
-		headers: getHeaders()
+		method: 'GET'
 	}).then((response) => response.json())
 }
 
 async function addChannelToUser({ channelId }: { channelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/channels?channelId=${channelId}`, {
-		method: 'GET',
-		headers: getHeaders()
+		method: 'GET'
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -84,8 +78,7 @@ async function addChannelToUser({ channelId }: { channelId: string }) {
 
 async function removeChannelFromUser({ channelId, userId }: { channelId: string; userId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/channels?channelId=${channelId}`, {
-		method: 'DELETE',
-		headers: getHeaders()
+		method: 'DELETE'
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -95,8 +88,7 @@ async function removeChannelFromUser({ channelId, userId }: { channelId: string;
 
 async function addHostChannelToUser({ hostChannelId }: { hostChannelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/host-channels?hostChannelId=${hostChannelId}`, {
-		method: 'PUT',
-		headers: getHeaders()
+		method: 'PUT'
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -105,8 +97,7 @@ async function addHostChannelToUser({ hostChannelId }: { hostChannelId: string }
 
 async function removeHostChannelFromUser({ hostChannelId }: { hostChannelId: string }) {
 	return await fetch(`${env.PUBLIC_API_URL}/users/host-channels?hostChannelId=${hostChannelId}`, {
-		method: 'DELETE',
-		headers: getHeaders()
+		method: 'DELETE'
 	}).then(async (response) => {
 		const res = await response.json()
 		//TODO: update user in authStore
@@ -229,19 +220,10 @@ async function deleteMembers({ channelId }: { channelId: string }) {
 	})
 }
 
-function resetSkipLimit() {
-	skip = 0
-	limit = 100
-}
-
-async function getMyChannels() {
-	return await fetch(`${env.PUBLIC_API_URL}/channels/me/hosted`, {
-		method: 'GET',
-		headers: getHeaders()
-	}).then(async (response) => {
-		const res = await response.json()
-		myChannels.set(res)
-	})
+async function getMyChannels({ skip = 0, limit = 50 }: { skip: number; limit: number }) {
+	return await fetch(`${env.PUBLIC_API_URL}/channels/me/hosted?skip=${skip}&limit=${limit}`, {
+		method: 'GET'
+	}).then((response) => response.json())
 }
 
 async function getChannelsByUserId({
@@ -263,43 +245,31 @@ async function getChannelsByUserId({
 	).then((response) => response.json())
 }
 
-async function getChannels({ isRefresh = false }: { isRefresh?: boolean } = {}) {
-	if (isRefresh) {
-		resetSkipLimit()
-	}
+async function getFavChannels({ skip = 0, limit = 50 }: { skip: number; limit: number }) {
+	return await fetch(`${env.PUBLIC_API_URL}/channels/me/fav?skip=${skip}&limit=${limit}`, {
+		method: 'GET'
+	}).then((response) => response.json())
+}
 
-	const result = await fetch(
+async function getMostActiveChannels({ skip = 0, limit = 50 }: { skip: number; limit: number }) {
+	return await fetch(`${env.PUBLIC_API_URL}/channels/most-active?skip=${skip}&limit=${limit}`, {
+		method: 'GET'
+	}).then((response) => response.json())
+}
+
+async function getWeeklyChannels({ skip = 0, limit = 50 }: { skip: number; limit: number }) {
+	return await fetch(`${env.PUBLIC_API_URL}/channels/weekly?skip=${skip}&limit=${limit}`, {
+		method: 'GET'
+	}).then((response) => response.json())
+}
+
+async function getChannels({ skip = 0, limit = 50 }: { skip: number; limit: number }) {
+	return await fetch(
 		`${env.PUBLIC_API_URL}/channels?searchQuery=${searchQuery}&skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET'
 		}
-	)
-
-	if (result.ok) {
-		return await result.json()
-	} else {
-		throw new Error('Error fetching channels')
-	}
-
-	// then(async (response) => {
-	// 	console.log('response', response)
-
-	// 	const res = await response.json()
-	// 	if (res.length) {
-	// 		skip += limit
-	// 		console.log('res', res)
-	//TODO: push res to channels
-	// channels.update(current => [...current, res])
-	// } else {
-	//TODO: show alert
-	// if ((this.searchQuery || this.filterTechList.length) && !this.skip)
-	//     this.snackBar.open('No results with the search criteria', null, {
-	//         duration: 2000
-	//     })
-	// }
-	// console.log(channels)
-	// return channels
-	// })
+	).then((response) => response.json())
 }
 
 async function leaveChannel({
@@ -371,86 +341,6 @@ async function toggleNotifications({ channel, userId }: { channel: any; userId: 
 //         })
 // }
 
-// async getTechList() {
-//     if (this.techList.length < 1) {
-//         const web2Assets: any = await lastValueFrom(this.http
-//             .get(`${environment.hostUrl}/assets/images/web2/_categoryWeb2.json`))
-//         const web3Assets: any = await lastValueFrom(this.http
-//             .get(`${environment.hostUrl}/assets/images/web3/_categoryWeb3.json`))
-//         const gameAssets: any = await lastValueFrom(this.http
-//             .get(`${environment.hostUrl}/assets/images/games/_categoryGames.json`))
-//         web3Assets.forEach((file) => {
-//             let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
-//             fileName = fileName.substring(0, fileName.indexOf('.'))
-//             const nameAndTickerList = fileName.split('-')
-//             const ticker = nameAndTickerList.pop().toUpperCase()
-//             const fullName = nameAndTickerList
-//                 .map((name) => name.charAt(0).toUpperCase() + name.slice(1))
-//                 .join(' ')
-//             file.item_text = `${fullName} (${ticker})`
-//         })
-//         web2Assets.push(...web3Assets)
-//         gameAssets.forEach((file) => {
-//             let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
-//             fileName = fileName.substring(0, fileName.indexOf('.'))
-//             const nameSplitList = fileName.split('-')
-//             const fullName = nameSplitList
-//                 .map((name) => name.charAt(0).toUpperCase() + name.slice(1))
-//                 .join(' ')
-//             file.item_text = fullName
-//         })
-//         web2Assets.push(...gameAssets)
-//         this.techList = web2Assets
-//         this.techList.sort((a, b) => a.item_text.localeCompare(b.item_text))
-//     }
-// }
-
-async function getTechList() {
-	if (get(techList).length < 1) {
-		let web2Assets: any = await fetch(`/category/web2/_categoryWeb2.json`, {
-			method: 'GET'
-		})
-		let web3Assets: any = await fetch(`/category/web3/_categoryWeb3.json`, {
-			method: 'GET'
-		})
-		let gameAssets: any = await fetch(`/category/games/_categoryGames.json`, {
-			method: 'GET'
-		})
-		if (web2Assets.ok) {
-			web2Assets = await web2Assets.json()
-		}
-		if (web3Assets.ok) {
-			web3Assets = await web3Assets.json()
-		}
-		if (gameAssets.ok) {
-			gameAssets = await gameAssets.json()
-		}
-
-		web3Assets.forEach((file: any) => {
-			let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
-			fileName = fileName.substring(0, fileName.indexOf('.'))
-			const nameAndTickerList = fileName.split('-')
-			const ticker = nameAndTickerList.pop().toUpperCase()
-			const fullName = nameAndTickerList
-				.map((name: any) => name.charAt(0).toUpperCase() + name.slice(1))
-				.join(' ')
-			file.item_text = `${fullName} (${ticker})`
-		})
-		web2Assets.push(...web3Assets)
-		gameAssets.forEach((file: any) => {
-			let fileName = file.item_image.substring(file.item_image.lastIndexOf('/') + 1)
-			fileName = fileName.substring(0, fileName.indexOf('.'))
-			const nameSplitList = fileName.split('-')
-			const fullName = nameSplitList
-				.map((name: any) => name.charAt(0).toUpperCase() + name.slice(1))
-				.join(' ')
-			file.item_text = fullName
-		})
-		web2Assets.push(...gameAssets)
-		techList.set(web2Assets)
-	}
-}
-
 async function getTechListJson() {
 	if (get(techList).length < 1) {
 		let gameAssets: any = await fetch(`svg-json/image_urls.json`, {
@@ -465,16 +355,12 @@ async function getTechListJson() {
 }
 
 async function getTags() {
-	let res: any = await fetch(`${env.PUBLIC_API_URL}/tags`, {
+	return await fetch(`${env.PUBLIC_API_URL}/tags`, {
 		method: 'GET'
-	})
-	if (res.ok) {
-		res = await res.json()
+	}).then(async (response) => {
+		const res = await response.json()
 		tags.set(res)
-	} else {
-		throw new Error('Tags not found')
-	}
-	return res
+	})
 }
 
 export {
@@ -495,6 +381,9 @@ export {
 	deleteMembers,
 	getMyChannels,
 	getChannelsByUserId,
+	getFavChannels,
+	getMostActiveChannels,
+	getWeeklyChannels,
 	getChannels,
 	leaveChannel,
 	enterChannel,
