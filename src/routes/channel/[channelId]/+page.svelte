@@ -13,7 +13,8 @@
 	let showDrawer = false
 
 	onMount(async () => {
-		const channelSocketId = get(`wsinit/wsid`)
+		console.log(data)
+		const channelSocketId = await get(`wsinit/channelid?channelId=${data.post._id}`)
 		const channelSocket = new WebSocket(
 			`${env.PUBLIC_WEBSOCKET_URL}/wsinit/channelid/${channelSocketId}/connect`
 		)
